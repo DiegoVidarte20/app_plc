@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -11,14 +10,13 @@ class FieldbusView extends StatefulWidget {
 }
 
 class _FieldbusViewState extends State<FieldbusView> {
-  // ===== Colores base (mismos tonos que System) =====
+  // ===== Colores base (match con System) =====
   static const Color _bgCard = Color(0xFF132F4C);
-  static const Color _bgElevated = Color(0xFF1A3A52);
+  static const Color _bgRow = Color(0xFF163456); // un poquito más oscuro
   static const Color _border = Color(0xFF1E4976);
-  static const Color _primary = Color(0xFF0066CC);
-  static const Color _success = Color(0xFF00E676);
+  static const Color _primary = Color(0xFF00A0FF);
   static const Color _warning = Color(0xFFFFB300);
-  // static const Color _danger = Color(0xFFFF3D00);
+  static const Color _success = Color(0xFF00E676);
   static const Color _textSecondary = Color(0xFF90CAF9);
   static const Color _textMuted = Color(0xFF5A7C99);
 
@@ -28,12 +26,14 @@ class _FieldbusViewState extends State<FieldbusView> {
   @override
   void initState() {
     super.initState();
-    // Simula refresco de datos cada 3 s
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      setState(() {
-        _lastUpdate = DateTime.now();
-      });
-    });
+    _timer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _tickLastUpdate(),
+    );
+  }
+
+  void _tickLastUpdate() {
+    setState(() => _lastUpdate = DateTime.now());
   }
 
   @override
@@ -48,27 +48,6 @@ class _FieldbusViewState extends State<FieldbusView> {
     return 'Last update: $s second${s == 1 ? '' : 's'} ago';
   }
 
-  // ===== Estilos Orbitron reutilizables =====
-  TextStyle get _sectionTitleStyle => GoogleFonts.orbitron(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.6,
-        color: Colors.white,
-      );
-
-  TextStyle get _statusPillStyle => GoogleFonts.orbitron(
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.4,
-        color: Colors.white,
-      );
-
-  TextStyle get _valueOrbitronStyle => GoogleFonts.orbitron(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
-      );
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -76,112 +55,79 @@ class _FieldbusViewState extends State<FieldbusView> {
       child: Column(
         children: [
           // ========== ETHERCAT MASTER ==========
-          _FieldbusSectionCard(
+          _FbSectionCard(
             title: 'ETHERCAT MASTER',
-            titleStyle: _sectionTitleStyle,
             statusText: 'OPERATIONAL',
             statusColor: _success,
-            statusTextStyle: _statusPillStyle,
             child: Column(
-              children: [
-                _FieldbusRow(
+              children: const [
+                _FbMetricRow(
                   label: 'Current State',
                   value: 'OP',
-                  valueStyle: _valueOrbitronStyle,
-                  bgColor: _bgElevated,
-                  borderLeftColor: _primary,
+                  stripeColor: _primary,
                 ),
-                const SizedBox(height: 8),
-                _FieldbusRow(
+                SizedBox(height: 8),
+                _FbMetricRow(
                   label: 'Connected Slaves',
                   value: '8 / 8',
-                  valueStyle: _valueOrbitronStyle,
-                  bgColor: _bgElevated,
-                  borderLeftColor: _primary,
+                  stripeColor: _primary,
                 ),
-                const SizedBox(height: 8),
-                _FieldbusRow(
+                SizedBox(height: 8),
+                _FbMetricRow(
                   label: 'Cycle Time',
                   value: '4.0 ms',
-                  valueStyle: _valueOrbitronStyle,
-                  bgColor: _bgElevated,
-                  borderLeftColor: _primary,
+                  stripeColor: _primary,
                 ),
               ],
             ),
           ),
 
           // ========== ERROR COUNTERS ==========
-          _FieldbusSectionCard(
+          _FbSectionCard(
             title: 'ERROR COUNTERS',
-            titleStyle: _sectionTitleStyle,
             statusText: '2 WARNINGS',
             statusColor: _warning,
-            statusTextStyle: _statusPillStyle,
-            // línea superior amarilla como en el HTML
-            topAccentColor: _warning,
+            highlightTop: true, // franja amarilla arriba
             child: Column(
-              children: [
-                _FieldbusRow(
+              children: const [
+                _FbMetricRow(
                   label: 'Lost Frames',
                   value: '2',
-                  valueStyle: _valueOrbitronStyle,
-                  bgColor: _bgElevated,
-                  borderLeftColor: _warning,
+                  stripeColor: _warning, // amarilla
                 ),
-                const SizedBox(height: 8),
-                _FieldbusRow(
+                SizedBox(height: 8),
+                _FbMetricRow(
                   label: 'CRC Errors',
                   value: '0',
-                  valueStyle: _valueOrbitronStyle,
-                  bgColor: _bgElevated,
-                  borderLeftColor: _primary,
+                  stripeColor: _primary, // azul
                 ),
               ],
             ),
           ),
 
           // ========== SLAVE TOPOLOGY ==========
-          _FieldbusSectionCard(
+          _FbSectionCard(
             title: 'SLAVE TOPOLOGY',
-            titleStyle: _sectionTitleStyle,
             statusText: '',
-            statusColor: Colors.transparent,
-            statusTextStyle: _statusPillStyle,
-            showStatusPill: false,
+            statusColor: _success,
             child: Column(
               children: const [
-                _SlaveRow(
-                  label: 'Slave 1: Drive X-Axis',
-                  state: 'Online',
-                ),
+                _SlaveRow(label: 'Slave 1: Drive X-Axis', status: 'Online'),
                 SizedBox(height: 8),
-                _SlaveRow(
-                  label: 'Slave 2: Drive Y-Axis',
-                  state: 'Online',
-                ),
+                _SlaveRow(label: 'Slave 2: Drive Y-Axis', status: 'Online'),
                 SizedBox(height: 8),
-                _SlaveRow(
-                  label: 'Slave 3: Drive Z-Axis',
-                  state: 'Online',
-                ),
+                _SlaveRow(label: 'Slave 3: Drive Z-Axis', status: 'Online'),
                 SizedBox(height: 8),
-                _SlaveRow(
-                  label: 'Slave 4: Remote I/O',
-                  state: 'Online',
-                ),
+                _SlaveRow(label: 'Slave 4: Remote I/O', status: 'Online'),
                 SizedBox(height: 8),
-                _SlaveRow(
-                  label: 'Slave 5: Safety Module',
-                  state: 'Online',
-                ),
+                _SlaveRow(label: 'Slave 5: Safety Module', status: 'Online'),
               ],
             ),
           ),
 
           const SizedBox(height: 8),
 
-          // ========== FOOTER LAST UPDATE ==========
+          // FOOTER "Last update"
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -197,10 +143,7 @@ class _FieldbusViewState extends State<FieldbusView> {
                 const SizedBox(width: 8),
                 Text(
                   _lastUpdateText(),
-                  style: const TextStyle(
-                    color: _textMuted,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: _textMuted, fontSize: 11),
                 ),
               ],
             ),
@@ -211,184 +154,291 @@ class _FieldbusViewState extends State<FieldbusView> {
   }
 }
 
-// ================== WIDGETS DE APOYO ==================
+// ================== CARD GENÉRICO FIELD BUS ==================
 
-class _FieldbusSectionCard extends StatelessWidget {
+class _FbSectionCard extends StatelessWidget {
   final String title;
-  final TextStyle titleStyle;
   final String statusText;
   final Color statusColor;
-  final TextStyle statusTextStyle;
   final Widget child;
-  final bool showStatusPill;
-  final Color? topAccentColor;
+  final bool highlightTop; // para ERROR COUNTERS
 
-  static const Color _bgCard = Color(0xFF132F4C);
-  static const Color _border = Color(0xFF1E4976);
+  static const Color _bgCard = _FieldbusViewState._bgCard;
+  static const Color _border = _FieldbusViewState._border;
 
-  const _FieldbusSectionCard({
+  const _FbSectionCard({
     required this.title,
-    required this.titleStyle,
     required this.statusText,
     required this.statusColor,
-    required this.statusTextStyle,
     required this.child,
-    this.showStatusPill = true,
-    this.topAccentColor,
+    this.highlightTop = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black54,
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
+      child: Stack(
         children: [
-          if (topAccentColor != null)
-            Container(
-              height: 3,
-              margin: const EdgeInsets.only(bottom: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                gradient: LinearGradient(
-                  colors: [
-                    topAccentColor!.withValues(alpha: .0),
-                    topAccentColor!,
-                    topAccentColor!.withValues(alpha: .0),
+          // Card base
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _bgCard,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: _border),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 12,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.orbitron(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (statusText.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withAlpha(40),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: statusColor.withAlpha(200)),
+                        ),
+                        child: Text(
+                          statusText.toUpperCase(),
+                          style: GoogleFonts.orbitron(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4,
+                            color: statusColor,
+                          ),
+                        ),
+                      ),
                   ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+                ),
+                if (statusText.isEmpty)
+                  const SizedBox(height: 6)
+                else
+                  const SizedBox(height: 14),
+                child,
+              ],
+            ),
+          ),
+
+          // Franja superior amarilla (solo cuando highlightTop = true)
+          if (highlightTop)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: Container(
+                height: 3,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(18),
+                  ),
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFFFD54F),
+                      Color(0xFFFFB300),
+                      Color(0xFFFFD54F),
+                    ],
+                  ),
                 ),
               ),
             ),
-          Row(
-            children: [
-              Text(title, style: titleStyle),
-              const Spacer(),
-              if (showStatusPill)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: .15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: statusColor.withValues(alpha: .4)),
-                  ),
-                  child: Text(
-                    statusText.toUpperCase(),
-                    style: statusTextStyle.copyWith(color: statusColor),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
         ],
       ),
     );
   }
 }
 
-class _FieldbusRow extends StatelessWidget {
+// ================== ROW PARA MÉTRICAS (Current state, Lost frames, etc) ==================
+
+// ================== ROW PARA MÉTRICAS ==================
+
+class _FbMetricRow extends StatelessWidget {
   final String label;
   final String value;
-  final TextStyle valueStyle;
-  final Color bgColor;
-  final Color borderLeftColor;
+  final Color stripeColor;
 
-  const _FieldbusRow({
+  static const Color _bgRow = _FieldbusViewState._bgRow;
+  static const Color _textSecondary = _FieldbusViewState._textSecondary;
+
+  const _FbMetricRow({
     required this.label,
     required this.value,
-    required this.valueStyle,
-    required this.bgColor,
-    required this.borderLeftColor,
+    required this.stripeColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      height: 56,
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF1E4976)),
+        color: _bgRow,
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          Container(
-            width: 3,
-            height: 18,
-            margin: const EdgeInsets.only(right: 10),
-            decoration: BoxDecoration(
-              color: borderLeftColor,
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(                    // <-- ya no es const
-                fontSize: 11,
-                color: _FieldbusViewState._textSecondary, // <-- usamos el static const
+          // barrita pegada al borde, con curvas
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: 4,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(14),
+                  bottomLeft: Radius.circular(14),
+                ),
+                gradient: LinearGradient(
+                  colors: [
+                    stripeColor.withValues(alpha: .95),
+                    stripeColor.withValues(alpha: .45),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
           ),
-          Text(value, style: valueStyle),
+
+          // *** AQUÍ EL CAMBIO: centramos verticalmente el Row ***
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                const SizedBox(width: 14), // espacio después de la barrita
+                Expanded(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 11,
+                      letterSpacing: 0.4,
+                      color: _textSecondary,
+                    ),
+                  ),
+                ),
+                Text(
+                  value,
+                  style: GoogleFonts.orbitron(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 14),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
+
+// ================== ROW PARA SLAVES ==================
+
+// ================== ROW PARA SLAVES ==================
 
 class _SlaveRow extends StatelessWidget {
   final String label;
-  final String state;
+  final String status;
 
-  const _SlaveRow({
-    required this.label,
-    required this.state,
-  });
+  static const Color _bgRow = _FieldbusViewState._bgRow;
+  static const Color _primary = _FieldbusViewState._primary;
+  static const Color _textSecondary = _FieldbusViewState._textSecondary;
+
+  const _SlaveRow({required this.label, required this.status});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      height: 60,
       decoration: BoxDecoration(
-        color: _FieldbusViewState._bgElevated,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _FieldbusViewState._border),
+        color: _bgRow,
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                color: _FieldbusViewState._textSecondary,
+          // barrita azul pegada al borde
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: 4,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
+                gradient: LinearGradient(
+                  colors: [Color(0xFF00B7FF), Color(0xFF0066FF)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
           ),
-          Text(
-            state,
-            style: GoogleFonts.orbitron(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+
+          // *** AQUÍ TAMBIÉN: centramos el contenido ***
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 11,
+                      letterSpacing: 0.4,
+                      color: _textSecondary,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _primary.withAlpha(40),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: _primary.withAlpha(200)),
+                  ),
+                  child: Text(
+                    status,
+                    style: GoogleFonts.orbitron(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
             ),
           ),
         ],
@@ -396,23 +446,21 @@ class _SlaveRow extends StatelessWidget {
     );
   }
 }
+
+// ================== DOT ==================
 
 class _Dot extends StatelessWidget {
   final Color color;
   final double size;
 
-  const _Dot({
-    required this.color,
-    this.size = 6,
-  });
+  const _Dot({required this.color, this.size = 6});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: size,
       height: size,
-      decoration:
-          BoxDecoration(color: color, shape: BoxShape.circle),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }
