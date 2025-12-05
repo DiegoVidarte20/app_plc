@@ -1,7 +1,6 @@
 // lib/presentation/views/storage/storage_view.dart
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../../services/storage_ws_service.dart';
 
 class StorageView extends StatefulWidget {
   const StorageView({super.key});
@@ -26,73 +25,196 @@ class _StorageViewState extends State<StorageView> {
   static const Color _healthGreen = Color(0xFF00C853);
   static const Color _badgeYellow = Color(0xFFFFB300);
 
-  late Timer _timer;
+  late final StorageWSService _ws;
+  final List<StorageVolume> _volumes = [];
+
+  bool _hasData = false;
+  String? _error;
   DateTime _lastUpdate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => setState(() => _lastUpdate = DateTime.now()),
+
+    _ws = StorageWSService('ws://192.168.170.1:9000/ws/storage');
+
+    _ws.stream.listen(
+      (vols) {
+        if (!mounted) return;
+        setState(() {
+          _volumes
+            ..clear()
+            ..addAll(vols);
+          _hasData = vols.isNotEmpty;
+          _error = null;
+          _lastUpdate = DateTime.now();
+        });
+      },
+      onError: (e) {
+        if (!mounted) return;
+        setState(() {
+          _error = e.toString();
+          _hasData = false;
+        });
+      },
     );
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _ws.dispose();
     super.dispose();
   }
 
   String _lastUpdateText() {
+    if (_error != null) {
+      return 'Error: $_error';
+    }
+    if (!_hasData) {
+      return 'Waiting for storage data...';
+    }
+
     final diff = DateTime.now().difference(_lastUpdate).inSeconds;
     final s = diff <= 1 ? 1 : diff;
     return 'Last update: $s second${s == 1 ? '' : 's'} ago';
   }
 
+  double _bytesToGB(double b) => b / (1024 * 1024 * 1024);
+
   @override
   Widget build(BuildContext context) {
+    // volumen “principal”: primero interno si existe, si no el primero de la lista
+    StorageVolume? primary;
+    if (_volumes.isNotEmpty) {
+      primary = _volumes.firstWhere(
+        (v) => v.internal,
+        orElse: () => _volumes.first,
+      );
+    }
+
+    final totalGB = primary != null ? _bytesToGB(primary.sizeBytes) : 0.0;
+    final usedGB = primary != null ? _bytesToGB(primary.usedBytes) : 0.0;
+    final freeGB = (totalGB - usedGB).clamp(0.0, double.infinity);
+    final ratio = primary?.usedRatio ?? 0.0;
+
+    final badgeText = !_hasData
+        ? 'WAITING'
+        : (primary?.mounted ?? false ? 'MOUNTED' : 'NOT MOUNTED');
+    final badgeColor = !_hasData
+        ? _badgeYellow
+        : (primary?.mounted ?? false ? _healthGreen : _accentOrangeDeep);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // INTERNAL FLASH
+          // ===== CARD PRINCIPAL: INTERNAL FLASH (o volumen principal) =====
           _StorageSectionCard(
-            title: 'INTERNAL FLASH',
-            badgeText: 'HEALTHY',
-            badgeColor: _healthGreen,
-            child: Column(
-              children: const [
-                _MetricRow(
-                  label: 'Total Space',
-                  value: '16.0 GB',
-                  stripeColor: _primaryBlue,
-                ),
-                SizedBox(height: 8),
-                _MetricRow(
-                  label: 'Used Space',
-                  value: '8.4 GB',
-                  stripeColor: _primaryBlue,
-                ),
-                SizedBox(height: 8),
-                _MetricRow(
-                  label: 'Free Space',
-                  value: '7.6 GB',
-                  stripeColor: _primaryBlue,
-                ),
-                SizedBox(height: 10),
-                _StorageProgressBar(
-                  value: 0.55, // aprox usado
-                  colorStart: _accentBlue,
-                  colorEnd: _primaryBlue,
-                ),
-              ],
-            ),
+            title: primary != null
+                ? (primary.internal
+                      ? 'INTERNAL FLASH'
+                      : (primary.label.isNotEmpty
+                            ? primary.label
+                            : primary.device.toUpperCase()))
+                : 'INTERNAL FLASH',
+            badgeText: badgeText,
+            badgeColor: badgeColor,
+            child: !_hasData || primary == null
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 20,
+                    ),
+                    child: Text(
+                      'No storage info yet.\nWaiting for controller data...',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        fontSize: 11,
+                        color: _textMuted,
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      _MetricRow(
+                        label: 'Total Space',
+                        value: '${totalGB.toStringAsFixed(2)} GB',
+                        stripeColor: _primaryBlue,
+                      ),
+                      const SizedBox(height: 8),
+                      _MetricRow(
+                        label: 'Used Space',
+                        value: '${usedGB.toStringAsFixed(2)} GB',
+                        stripeColor: _primaryBlue,
+                      ),
+                      const SizedBox(height: 8),
+                      _MetricRow(
+                        label: 'Free Space',
+                        value: '${freeGB.toStringAsFixed(2)} GB',
+                        stripeColor: _primaryBlue,
+                      ),
+                      const SizedBox(height: 10),
+                      _StorageProgressBar(
+                        value: ratio,
+                        colorStart: _accentBlue,
+                        colorEnd: _primaryBlue,
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Device: ${primary.device} · FS: ${primary.format}',
+                          style: TextStyle(
+                            fontFamily: 'JetBrainsMono',
+                            fontSize: 10,
+                            color: _textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
 
           const SizedBox(height: 12),
 
-          // SD CARD
+          // ===== OTROS DISPOSITIVOS (si hubiese más de uno) =====
+          if (_volumes.length > 1)
+            _StorageSectionCard(
+              title: 'OTHER DEVICES',
+              badgeText: '',
+              badgeColor: Colors.transparent,
+              showBadge: false,
+              child: Column(
+                children: _volumes.where((v) => v != primary).map((v) {
+                  final t = _bytesToGB(v.sizeBytes);
+                  final u = _bytesToGB(v.usedBytes);
+                  // final f = (t - u).clamp(0.0, double.infinity);
+                  return Column(
+                    children: [
+                      _MetricRow(
+                        label:
+                            '${v.label.isNotEmpty ? v.label : v.device} (${v.format})',
+                        value:
+                            '${u.toStringAsFixed(2)} / ${t.toStringAsFixed(2)} GB',
+                        stripeColor: _accentOrange,
+                      ),
+                      const SizedBox(height: 6),
+                      _StorageProgressBar(
+                        value: v.usedRatio,
+                        colorStart: _accentOrange,
+                        colorEnd: _accentOrangeDeep,
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+
+          const SizedBox(height: 12),
+
+          // ===== SD CARD (FAKE / ESTÁTICO, COMO ANTES) =====
           _StorageSectionCard(
             title: 'SD CARD',
             badgeText: '79% FULL',
@@ -118,7 +240,7 @@ class _StorageViewState extends State<StorageView> {
                 ),
                 SizedBox(height: 10),
                 _StorageProgressBar(
-                  value: 0.79, // 79% full
+                  value: 0.79,
                   colorStart: _accentOrange,
                   colorEnd: _accentOrangeDeep,
                 ),
@@ -128,7 +250,7 @@ class _StorageViewState extends State<StorageView> {
 
           const SizedBox(height: 12),
 
-          // STORAGE HEALTH
+          // ===== STORAGE HEALTH (FAKE / ESTÁTICO) =====
           _StorageSectionCard(
             title: 'STORAGE HEALTH',
             badgeText: '',
@@ -159,7 +281,7 @@ class _StorageViewState extends State<StorageView> {
 
           const SizedBox(height: 16),
 
-          // Footer "Last update"
+          // ===== Footer "Last update" =====
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -175,10 +297,7 @@ class _StorageViewState extends State<StorageView> {
                 const SizedBox(width: 8),
                 Text(
                   _lastUpdateText(),
-                  style: const TextStyle(
-                    color: _textMuted,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: _textMuted, fontSize: 11),
                 ),
               ],
             ),
@@ -228,7 +347,7 @@ class _StorageSectionCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header del card (tipo INTERNAL FLASH / SD CARD)
+          // Header del card
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 6),
             decoration: BoxDecoration(
@@ -240,7 +359,8 @@ class _StorageSectionCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.orbitron(
+                  style: const TextStyle(
+                    fontFamily: 'Orbitron',
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.1,
@@ -261,7 +381,8 @@ class _StorageSectionCard extends StatelessWidget {
                     ),
                     child: Text(
                       badgeText.toUpperCase(),
-                      style: GoogleFonts.jetBrainsMono(
+                      style: const TextStyle(
+                        fontFamily: 'JetBrainsMono',
                         fontSize: 9,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.4,
@@ -282,7 +403,7 @@ class _StorageSectionCard extends StatelessWidget {
   }
 }
 
-/* ================== ROW MÉTRICA CON BORDER LEFT ================== */
+/* ================== ROW MÉTRICA ================== */
 
 class _MetricRow extends StatelessWidget {
   final String label;
@@ -291,7 +412,6 @@ class _MetricRow extends StatelessWidget {
 
   static const Color _bgRow = _StorageViewState._bgRow;
   static const Color _textSecondary = _StorageViewState._textSecondary;
-  // static const Color _textMuted = Color.fromARGB(255, 90, 124, 153);
 
   const _MetricRow({
     required this.label,
@@ -307,7 +427,6 @@ class _MetricRow extends StatelessWidget {
         color: _bgRow,
         child: Stack(
           children: [
-            // barrita lateral
             Positioned(
               left: 0,
               top: 0,
@@ -332,15 +451,19 @@ class _MetricRow extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.jetBrainsMono(
+                    style: TextStyle(
+                      fontFamily: 'JetBrainsMono',
                       fontSize: 11,
                       color: _textSecondary,
                     ),
                   ),
+
                   const Spacer(),
+
                   Text(
                     value,
-                    style: GoogleFonts.orbitron(
+                    style: const TextStyle(
+                      fontFamily: 'Orbitron',
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -420,10 +543,7 @@ class _Dot extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

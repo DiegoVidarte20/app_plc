@@ -1,8 +1,7 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:plc_app/services/system_ws_service.dart';
 
 class SystemView extends StatefulWidget {
   const SystemView({super.key});
@@ -25,60 +24,72 @@ class _SystemViewState extends State<SystemView> {
   final Random _rnd = Random();
 
   // CPU cores %
-  List<double> _cores = [32, 45, 28, 51];
+  List<double> _cores = [0, 0, 0, 0];
 
-  // RAM (GB)
-  final double _totalRam = 8.0;
-  double _usedRam = 4.8;
+  // RAM en bytes (viene del WS)
+  double _totalRamBytes = 0;
+  double _usedRamBytes = 0;
 
-  // Temps (°C)
+  double get totalRamGB => _totalRamBytes / (1024 * 1024 * 1024);
+  double get usedRamGB => _usedRamBytes / (1024 * 1024 * 1024);
+
+  // Temps (°C) – por ahora fake con un pequeño ruido
   double _cpuTemp = 58;
   double _boardTemp = 42;
 
-  late Timer _timer;
+  late final SystemWSService _ws;
   DateTime _lastUpdate = DateTime.now();
+  bool _hasData = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _updateMetrics(),
+
+    _ws = SystemWSService('ws://192.168.170.1:9000/ws/resources');
+
+    _ws.stream.listen(
+      (metrics) {
+        setState(() {
+          _cores = metrics.cores;
+          _totalRamBytes = metrics.totalRam;
+          _usedRamBytes = metrics.usedRam;
+
+          // pequeña animación para las temperaturas
+          _cpuTemp = (_cpuTemp + (_rnd.nextDouble() * 2 - 1)).clamp(45.0, 75.0);
+          _boardTemp = (_boardTemp + (_rnd.nextDouble() * 2 - 1)).clamp(
+            35.0,
+            60.0,
+          );
+
+          _lastUpdate = DateTime.now();
+          _hasData = true;
+          _error = null;
+        });
+      },
+      onError: (e) {
+        setState(() {
+          _error = e.toString();
+          _hasData = false;
+        });
+      },
     );
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _ws.dispose();
     super.dispose();
   }
 
-  void _updateMetrics() {
-    setState(() {
-      // CPU cores: pequeño ruido [-5, +5] limitado 15–95
-      _cores = _cores
-          .map((v) {
-            final delta = _rnd.nextDouble() * 10 - 5;
-            final nv = v + delta;
-            // usar límites double para que clamp devuelva double
-            return nv.clamp(15.0, 95.0);
-          })
-          .cast<double>() // por si acaso, lo dejamos explícito
-          .toList();
-
-      // RAM usada: oscila un poco
-      final deltaRam = _rnd.nextDouble() * 0.4 - 0.2;
-      _usedRam = (_usedRam + deltaRam).clamp(2.0, 6.5);
-
-      // Temps: también se mueven un poquito
-      _cpuTemp = (_cpuTemp + (_rnd.nextDouble() * 2 - 1)).clamp(45.0, 75.0);
-      _boardTemp = (_boardTemp + (_rnd.nextDouble() * 2 - 1)).clamp(35.0, 60.0);
-
-      _lastUpdate = DateTime.now();
-    });
-  }
-
   String _lastUpdateText() {
+    if (!_hasData && _error == null) {
+      return 'Waiting for data...';
+    }
+    if (_error != null) {
+      return 'Error: $_error';
+    }
+
     final diff = DateTime.now().difference(_lastUpdate).inSeconds;
     final s = diff <= 1 ? 1 : diff;
     return 'Last update: $s second${s == 1 ? '' : 's'} ago';
@@ -86,26 +97,38 @@ class _SystemViewState extends State<SystemView> {
 
   @override
   Widget build(BuildContext context) {
+    final hasCpuData = _hasData && _cores.any((v) => v > 0);
+    final hasMemData = _hasData && _totalRamBytes > 0;
+
+    final memTotalStr = hasMemData
+        ? '${totalRamGB.toStringAsFixed(2)} GB'
+        : '—';
+    final memUsedStr = hasMemData ? '${usedRamGB.toStringAsFixed(2)} GB' : '—';
+    final memFreeStr = hasMemData
+        ? '${(totalRamGB - usedRamGB).toStringAsFixed(2)} GB FREE'
+        : 'WAITING...';
+    final memRatio = hasMemData
+        ? (usedRamGB / totalRamGB).clamp(0.0, 1.0)
+        : 0.0;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // CPU LOAD
+          // ================= CPU LOAD =================
           _SectionCard(
             title: 'CPU LOAD',
-            statusText: 'HEALTHY',
-            statusColor: _success,
+            statusText: hasCpuData ? 'HEALTHY' : 'NO DATA',
+            statusColor: hasCpuData ? _success : _warning,
             child: GridView.count(
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-
-              // 👉 un poco más alto para que no haga overflow
               childAspectRatio: 1.7,
               children: List.generate(4, (i) {
-                final value = _cores[i];
+                final value = (i < _cores.length) ? _cores[i] : 0.0;
                 return _CoreMetricCard(
                   label: 'CORE ${i + 1}',
                   value: value,
@@ -119,27 +142,27 @@ class _SystemViewState extends State<SystemView> {
             ),
           ),
 
-          // MEMORY
+          // ================= MEMORY =================
           _SectionCard(
             title: 'MEMORY',
-            statusText: '${(_totalRam - _usedRam).toStringAsFixed(1)} GB FREE',
-            statusColor: _success,
+            statusText: memFreeStr,
+            statusColor: hasMemData ? _success : _warning,
             child: Column(
               children: [
                 _ListMetricRow(
                   label: 'Total RAM',
-                  value: '${_totalRam.toStringAsFixed(1)} GB',
+                  value: memTotalStr,
                   bgColor: _bgElevated,
                 ),
                 const SizedBox(height: 8),
                 _ListMetricRow(
                   label: 'Used RAM',
-                  value: '${_usedRam.toStringAsFixed(1)} GB',
+                  value: memUsedStr,
                   bgColor: _bgElevated,
                 ),
                 const SizedBox(height: 10),
                 _ProgressBar(
-                  value: _usedRam / _totalRam,
+                  value: memRatio,
                   backgroundColor: _bgElevated,
                   gradient: const LinearGradient(
                     colors: [_warning, _danger],
@@ -151,7 +174,7 @@ class _SystemViewState extends State<SystemView> {
             ),
           ),
 
-          // TEMPERATURES
+          // ================= TEMPERATURES =================
           _SectionCard(
             title: 'TEMPERATURES',
             statusText: 'NORMAL',
@@ -172,12 +195,12 @@ class _SystemViewState extends State<SystemView> {
             ),
           ),
 
-          // POWER SUPPLY
+          // ================= POWER SUPPLY =================
           _SectionCard(
             title: 'POWER SUPPLY',
             statusText: 'STABLE',
             statusColor: _success,
-            child: _ListMetricRow(
+            child: const _ListMetricRow(
               label: 'Input Voltage (24V)',
               value: '24.2 V',
               bgColor: _bgElevated,
@@ -186,7 +209,7 @@ class _SystemViewState extends State<SystemView> {
 
           const SizedBox(height: 8),
 
-          // FOOTER "Last update"
+          // ================= FOOTER =================
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -257,14 +280,14 @@ class _SectionCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.orbitron(
+                style: const TextStyle(
+                  fontFamily: 'Orbitron',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                   letterSpacing: 1.0,
                 ),
               ),
-
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -318,29 +341,25 @@ class _CoreMetricCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-
-        // 👉 reparte bien el espacio, así no se choca con la barra
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         mainAxisSize: MainAxisSize.max,
-
         children: [
-          // CORE 1, CORE 2, etc
           Text(
             label,
-            style: GoogleFonts.orbitron(
+            style: const TextStyle(
+              fontFamily: 'Orbitron',
               fontSize: 10,
               letterSpacing: 1.2,
-              color: const Color(0xFF60759C),
+              color: Color(0xFF60759C),
             ),
           ),
-
-          // 32 %
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 value.toStringAsFixed(0),
-                style: GoogleFonts.orbitron(
+                style: const TextStyle(
+                  fontFamily: 'Orbitron',
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -350,7 +369,8 @@ class _CoreMetricCard extends StatelessWidget {
               const SizedBox(width: 2),
               Text(
                 '%',
-                style: GoogleFonts.orbitron(
+                style: const TextStyle(
+                  fontFamily: 'Orbitron',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.white70,
@@ -358,12 +378,9 @@ class _CoreMetricCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 4),
-
-          // 👉 usamos el _ProgressBar que ya tienes
           _ProgressBar(
-            value: value / 100, // de 0–100 → 0–1
+            value: value / 100,
             gradient: gradient,
             backgroundColor: const Color(0xFF1A3A52),
           ),
@@ -460,7 +477,6 @@ class _TemperatureGauge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // círculo fake tipo gauge
         SizedBox(
           width: 110,
           height: 110,
@@ -492,7 +508,8 @@ class _TemperatureGauge extends StatelessWidget {
               ),
               Text(
                 '${value.toStringAsFixed(0)}°C',
-                style: GoogleFonts.orbitron(
+                style: const TextStyle(
+                  fontFamily: 'Orbitron',
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,

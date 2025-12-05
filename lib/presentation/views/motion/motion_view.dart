@@ -1,7 +1,6 @@
 // lib/presentation/views/motion/motion_view.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class MotionView extends StatefulWidget {
   const MotionView({super.key});
@@ -12,8 +11,10 @@ class MotionView extends StatefulWidget {
 
 class _MotionViewState extends State<MotionView> {
   // Colores base (mismos tonos que SYSTEM/FIELDBUS)
-  static const Color _bgCard = Color(0xFF132F4C);   // card grande
-  static const Color _bgInner = Color(0xFF1A3A52);  // tarjetas internas X/Y/Z y spindle
+  static const Color _bgCard = Color(0xFF132F4C); // card grande
+  static const Color _bgInner = Color(
+    0xFF1A3A52,
+  ); // tarjetas internas X/Y/Z y spindle
   static const Color _border = Color(0xFF1E4976);
 
   // static const Color _success = Color(0xFF00E676);
@@ -47,62 +48,71 @@ class _MotionViewState extends State<MotionView> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return SingleChildScrollView(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      children: [
-        // Card solo del título + chip
-        const AxisOverviewCard(),
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Card solo del título + chip
+          const AxisOverviewCard(),
 
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-        // Card grande que envuelve X/Y/Z (fondo #132F4C)
-        const _AxesBlockCard(),
+          // Card grande que envuelve X/Y/Z (fondo #132F4C)
+          const _AxesBlockCard(),
 
-        // ========== ERROR CODES ==========
-        _MotionSectionCard(
-          title: 'ERROR CODES',
-          statusText: '1 ERROR',
-          statusColor: _danger,
-          highlightTop: true, // franja roja arriba
-          child: const _ErrorRow(
-            message: 'Spindle: F2020 - Position Error',
-            status: 'Active',
+          // ========== ERROR CODES ==========
+          _MotionSectionCard(
+            title: 'ERROR CODES',
+            statusText: '1 ERROR',
+            statusColor: _danger,
+            highlightTop: true, // franja roja arriba
+            child: const _ErrorRow(
+              message: 'Spindle: F2020 - Position Error',
+              status: 'Active',
+            ),
           ),
-        ),
 
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-        // Footer "last update"
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            color: _bgCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _border),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const _Dot(color: _primary, size: 6),
-              const SizedBox(width: 8),
-              Text(
-                _lastUpdateText(),
-                style: const TextStyle(
-                  color: _textMuted,
-                  fontSize: 11,
+          // Footer "last update"
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: _bgCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _border),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const _Dot(color: _primary, size: 6),
+                const SizedBox(width: 8),
+                const Text(
+                  // usa solo JetBrainsMono global si quieres en el tema
+                  // pero aquí solo color y tamaño
+                  '',
+                  style: TextStyle(
+                    // placeholder, el texto real va abajo
+                    fontSize: 0,
+                  ),
                 ),
-              ),
-            ],
+                Text(
+                  _lastUpdateText(),
+                  style: const TextStyle(
+                    color: _textMuted,
+                    fontSize: 11,
+                    fontFamily: 'JetBrainsMono',
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
+        ],
+      ),
+    );
+  }
 }
 
 /* ================== SECTION CARD (AXIS OVERVIEW / ERROR CODES) ================== */
@@ -151,7 +161,8 @@ class _MotionSectionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.orbitron(
+                      style: const TextStyle(
+                        fontFamily: 'Orbitron',
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.1,
@@ -168,13 +179,12 @@ class _MotionSectionCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: statusColor.withAlpha(40),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: statusColor.withAlpha(200),
-                          ),
+                          border: Border.all(color: statusColor.withAlpha(200)),
                         ),
                         child: Text(
                           statusText.toUpperCase(),
-                          style: GoogleFonts.jetBrainsMono(
+                          style: TextStyle(
+                            fontFamily: 'JetBrainsMono',
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.4,
@@ -241,14 +251,15 @@ class AxisOverviewCard extends StatelessWidget {
             color: Colors.black54,
             blurRadius: 12,
             offset: Offset(0, 6),
-          )
+          ),
         ],
       ),
       child: Row(
         children: [
-          Text(
+          const Text(
             "AXIS OVERVIEW",
-            style: GoogleFonts.orbitron(
+            style: TextStyle(
+              fontFamily: 'Orbitron',
               fontSize: 13,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.1,
@@ -263,9 +274,10 @@ class AxisOverviewCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: success.withAlpha(200), width: 1.2),
             ),
-            child: Text(
+            child: const Text(
               "ALL ACTIVE",
-              style: GoogleFonts.jetBrainsMono(
+              style: TextStyle(
+                fontFamily: 'JetBrainsMono',
                 color: success,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -278,8 +290,6 @@ class AxisOverviewCard extends StatelessWidget {
     );
   }
 }
-
-
 
 class _AxesBlockCard extends StatelessWidget {
   const _AxesBlockCard();
@@ -338,7 +348,6 @@ class _AxesBlockCard extends StatelessWidget {
   }
 }
 
-
 /* ================== AXIS ROW (X/Y/Z) ================== */
 
 class _AxisRow extends StatelessWidget {
@@ -350,7 +359,6 @@ class _AxisRow extends StatelessWidget {
   final String torqueText;
 
   static const Color _bgInner = _MotionViewState._bgInner;
-  // static const Color _textSecondary = _MotionViewState._textSecondary;
 
   const _AxisRow({
     required this.axisName,
@@ -365,7 +373,7 @@ class _AxisRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _bgInner,                  // <-- fondo #1A3A52
+        color: _bgInner, // <-- fondo #1A3A52
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -377,7 +385,8 @@ class _AxisRow extends StatelessWidget {
             children: [
               Text(
                 axisName,
-                style: GoogleFonts.orbitron(
+                style: const TextStyle(
+                  fontFamily: 'Orbitron',
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -385,8 +394,10 @@ class _AxisRow extends StatelessWidget {
               ),
               const Spacer(),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withAlpha(40),
                   borderRadius: BorderRadius.circular(999),
@@ -394,7 +405,8 @@ class _AxisRow extends StatelessWidget {
                 ),
                 child: Text(
                   statusLabel.toUpperCase(),
-                  style: GoogleFonts.jetBrainsMono(
+                  style: const TextStyle(
+                    fontFamily: 'JetBrainsMono',
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.4,
@@ -409,21 +421,9 @@ class _AxisRow extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _AxisMetric(
-                label: 'Pos:',
-                value: posText,
-                unit: 'mm',
-              ),
-              _AxisMetric(
-                label: 'Vel:',
-                value: velText,
-                unit: 'mm/s',
-              ),
-              _AxisMetric(
-                label: 'Torque:',
-                value: torqueText,
-                unit: '%',
-              ),
+              _AxisMetric(label: 'Pos:', value: posText, unit: 'mm'),
+              _AxisMetric(label: 'Vel:', value: velText, unit: 'mm/s'),
+              _AxisMetric(label: 'Torque:', value: torqueText, unit: '%'),
             ],
           ),
         ],
@@ -451,14 +451,16 @@ class _AxisMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.jetBrainsMono(
+          style: const TextStyle(
+            fontFamily: 'JetBrainsMono',
             fontSize: 11,
             color: _textSecondary,
           ),
         ),
         Text(
           ' $value ',
-          style: GoogleFonts.jetBrainsMono(
+          style: const TextStyle(
+            fontFamily: 'JetBrainsMono',
             fontSize: 11,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -466,7 +468,8 @@ class _AxisMetric extends StatelessWidget {
         ),
         Text(
           unit,
-          style: GoogleFonts.jetBrainsMono(
+          style: const TextStyle(
+            fontFamily: 'JetBrainsMono',
             fontSize: 11,
             color: _textSecondary,
           ),
@@ -486,17 +489,14 @@ class _ErrorRow extends StatelessWidget {
   static const Color _primary = _MotionViewState._primary;
   static const Color _textSecondary = _MotionViewState._textSecondary;
 
-  const _ErrorRow({
-    required this.message,
-    required this.status,
-  });
+  const _ErrorRow({required this.message, required this.status});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
-        color: _bgInner,                      // <-- fondo #1A3A52
+        color: _bgInner, // <-- fondo #1A3A52
         borderRadius: BorderRadius.circular(18),
       ),
       height: 64,
@@ -524,13 +524,12 @@ class _ErrorRow extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(width: 18),
-
           Expanded(
             child: Text(
               message,
-              style: GoogleFonts.jetBrainsMono(
+              style: const TextStyle(
+                fontFamily: 'JetBrainsMono',
                 fontSize: 11,
                 color: _textSecondary,
               ),
@@ -546,13 +545,15 @@ class _ErrorRow extends StatelessWidget {
             ),
             child: Text(
               status,
-              style: GoogleFonts.orbitron(
+              style: const TextStyle(
+                fontFamily: 'Orbitron',
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
           ),
+
           const SizedBox(width: 16),
         ],
       ),
@@ -573,8 +574,7 @@ class _Dot extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration:
-          BoxDecoration(color: color, shape: BoxShape.circle),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:plc_app/services/fieldbus_ws_service.dart';
 
 class FieldbusView extends StatefulWidget {
   const FieldbusView({super.key});
@@ -23,26 +23,54 @@ class _FieldbusViewState extends State<FieldbusView> {
   late Timer _timer;
   DateTime _lastUpdate = DateTime.now();
 
+  late final FieldbusWSService _ws;
+  FieldbusMasterStatus? _status;
+  String? _error;
+  bool _hasData = false;
+
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _tickLastUpdate(),
-    );
-  }
 
-  void _tickLastUpdate() {
-    setState(() => _lastUpdate = DateTime.now());
+    // timer solo para refrescar el texto "Last update"
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+
+    _ws = FieldbusWSService('ws://192.168.170.1:9000/ws/fieldbus');
+
+    _ws.stream.listen(
+      (s) {
+        setState(() {
+          _status = s;
+          _hasData = true;
+          _error = null;
+          _lastUpdate = DateTime.now();
+        });
+      },
+      onError: (e) {
+        setState(() {
+          _error = e.toString();
+          _hasData = false;
+        });
+      },
+    );
   }
 
   @override
   void dispose() {
     _timer.cancel();
+    _ws.dispose();
     super.dispose();
   }
 
   String _lastUpdateText() {
+    if (!_hasData && _error == null) {
+      return 'Waiting for data...';
+    }
+    if (_error != null) {
+      return 'Error: $_error';
+    }
     final diff = DateTime.now().difference(_lastUpdate).inSeconds;
     final s = diff <= 1 ? 1 : diff;
     return 'Last update: $s second${s == 1 ? '' : 's'} ago';
@@ -50,68 +78,106 @@ class _FieldbusViewState extends State<FieldbusView> {
 
   @override
   Widget build(BuildContext context) {
+    // ======= datos relevantes del JSON =========
+    final masterState = (_status?.masterState ?? '')
+        .toUpperCase()
+        .ifEmptyReturn('--');
+    final componentState = (_status?.componentState ?? '')
+        .toUpperCase()
+        .ifEmptyReturn('--');
+    final cycleStr = _status != null
+        ? '${_status!.cycleTimeMs.toStringAsFixed(1)} ms'
+        : '--';
+    final linkStr = _status != null
+        ? '${_status!.port} · ${_status!.linkStatus.toUpperCase()}'
+        : '--';
+    final topoStr = _status != null
+        ? '${_status!.topologyState.toUpperCase()} (Δ ${_status!.topologyChanges})'
+        : '--';
+
+    // texto y color del pill del card
+    final bool linkOk = _status?.linkStatus == 'connected';
+    final masterPillText = !_hasData
+        ? 'WAITING...'
+        : (linkOk ? 'OPERATIONAL' : 'NO LINK');
+    final masterPillColor = !_hasData
+        ? _warning
+        : (linkOk ? _success : _warning);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // ========== ETHERCAT MASTER ==========
+          // ========== ETHERCAT MASTER (dinámico) ==========
           _FbSectionCard(
             title: 'ETHERCAT MASTER',
-            statusText: 'OPERATIONAL',
-            statusColor: _success,
+            statusText: masterPillText,
+            statusColor: masterPillColor,
             child: Column(
-              children: const [
+              children: [
                 _FbMetricRow(
-                  label: 'Current State',
-                  value: 'OP',
+                  label: 'Master State',
+                  value: masterState,
                   stripeColor: _primary,
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 _FbMetricRow(
-                  label: 'Connected Slaves',
-                  value: '8 / 8',
+                  label: 'Component State',
+                  value: componentState,
                   stripeColor: _primary,
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 _FbMetricRow(
                   label: 'Cycle Time',
-                  value: '4.0 ms',
+                  value: cycleStr,
+                  stripeColor: _primary,
+                ),
+                const SizedBox(height: 8),
+                _FbMetricRow(
+                  label: 'Link',
+                  value: linkStr,
+                  stripeColor: linkOk ? _success : _warning,
+                ),
+                const SizedBox(height: 8),
+                _FbMetricRow(
+                  label: 'Topology',
+                  value: topoStr,
                   stripeColor: _primary,
                 ),
               ],
             ),
           ),
 
-          // ========== ERROR COUNTERS ==========
-          _FbSectionCard(
+          // ========== ERROR COUNTERS (por ahora mock) ==========
+          const _FbSectionCard(
             title: 'ERROR COUNTERS',
             statusText: '2 WARNINGS',
             statusColor: _warning,
-            highlightTop: true, // franja amarilla arriba
+            highlightTop: true,
             child: Column(
-              children: const [
+              children: [
                 _FbMetricRow(
                   label: 'Lost Frames',
                   value: '2',
-                  stripeColor: _warning, // amarilla
+                  stripeColor: _warning,
                 ),
                 SizedBox(height: 8),
                 _FbMetricRow(
                   label: 'CRC Errors',
                   value: '0',
-                  stripeColor: _primary, // azul
+                  stripeColor: _primary,
                 ),
               ],
             ),
           ),
 
-          // ========== SLAVE TOPOLOGY ==========
-          _FbSectionCard(
+          // ========== SLAVE TOPOLOGY (mock) ==========
+          const _FbSectionCard(
             title: 'SLAVE TOPOLOGY',
             statusText: '',
             statusColor: _success,
             child: Column(
-              children: const [
+              children: [
                 _SlaveRow(label: 'Slave 1: Drive X-Axis', status: 'Online'),
                 SizedBox(height: 8),
                 _SlaveRow(label: 'Slave 2: Drive Y-Axis', status: 'Online'),
@@ -152,6 +218,11 @@ class _FieldbusViewState extends State<FieldbusView> {
       ),
     );
   }
+}
+
+// pequeña extension para no estar comparando vacíos a cada rato
+extension on String {
+  String ifEmptyReturn(String fallback) => trim().isEmpty ? fallback : this;
 }
 
 // ================== CARD GENÉRICO FIELD BUS ==================
@@ -201,7 +272,8 @@ class _FbSectionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.orbitron(
+                      style: const TextStyle(
+                        fontFamily: 'Orbitron',
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.1,
@@ -222,7 +294,8 @@ class _FbSectionCard extends StatelessWidget {
                         ),
                         child: Text(
                           statusText.toUpperCase(),
-                          style: GoogleFonts.orbitron(
+                          style: TextStyle(
+                            fontFamily: 'Orbitron',
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.4,
@@ -270,8 +343,6 @@ class _FbSectionCard extends StatelessWidget {
   }
 }
 
-// ================== ROW PARA MÉTRICAS (Current state, Lost frames, etc) ==================
-
 // ================== ROW PARA MÉTRICAS ==================
 
 class _FbMetricRow extends StatelessWidget {
@@ -312,8 +383,8 @@ class _FbMetricRow extends StatelessWidget {
                 ),
                 gradient: LinearGradient(
                   colors: [
-                    stripeColor.withValues(alpha: .95),
-                    stripeColor.withValues(alpha: .45),
+                    stripeColor.withAlpha(240),
+                    stripeColor.withAlpha(120),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -322,16 +393,16 @@ class _FbMetricRow extends StatelessWidget {
             ),
           ),
 
-          // *** AQUÍ EL CAMBIO: centramos verticalmente el Row ***
           Align(
             alignment: Alignment.centerLeft,
             child: Row(
               children: [
-                const SizedBox(width: 14), // espacio después de la barrita
+                const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     label,
-                    style: GoogleFonts.jetBrainsMono(
+                    style: TextStyle(
+                      fontFamily: 'JetBrainsMono',
                       fontSize: 11,
                       letterSpacing: 0.4,
                       color: _textSecondary,
@@ -340,7 +411,8 @@ class _FbMetricRow extends StatelessWidget {
                 ),
                 Text(
                   value,
-                  style: GoogleFonts.orbitron(
+                  style: const TextStyle(
+                    fontFamily: 'Orbitron',
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
@@ -355,9 +427,6 @@ class _FbMetricRow extends StatelessWidget {
     );
   }
 }
-
-
-// ================== ROW PARA SLAVES ==================
 
 // ================== ROW PARA SLAVES ==================
 
@@ -381,7 +450,6 @@ class _SlaveRow extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // barrita azul pegada al borde
           Positioned(
             left: 0,
             top: 0,
@@ -401,23 +469,24 @@ class _SlaveRow extends StatelessWidget {
               ),
             ),
           ),
-
-          // *** AQUÍ TAMBIÉN: centramos el contenido ***
           Align(
             alignment: Alignment.centerLeft,
             child: Row(
               children: [
                 const SizedBox(width: 14),
+
                 Expanded(
                   child: Text(
                     label,
-                    style: GoogleFonts.jetBrainsMono(
+                    style: TextStyle(
+                      fontFamily: 'JetBrainsMono',
                       fontSize: 11,
                       letterSpacing: 0.4,
                       color: _textSecondary,
                     ),
                   ),
                 ),
+
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -430,13 +499,15 @@ class _SlaveRow extends StatelessWidget {
                   ),
                   child: Text(
                     status,
-                    style: GoogleFonts.orbitron(
+                    style: const TextStyle(
+                      fontFamily: 'Orbitron',
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 12),
               ],
             ),

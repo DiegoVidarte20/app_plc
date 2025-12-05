@@ -1,7 +1,5 @@
 // lib/presentation/widgets/header_ctrlx.dart
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 class CtrlXHeader extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -25,8 +23,9 @@ class CtrlXHeader extends StatelessWidget {
     const secondary = Color(0xFF00E5A5);
 
     final bgColor = const Color(0xFF0F1C2E);
-    final pillColor =
-        connected ? Colors.greenAccent.shade400 : Colors.redAccent.shade200;
+    final pillColor = connected
+        ? Colors.greenAccent.shade400
+        : Colors.redAccent.shade200;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -68,7 +67,8 @@ class CtrlXHeader extends StatelessWidget {
                 child: Center(
                   child: Text(
                     'X',
-                    style: GoogleFonts.orbitron(
+                    style: const TextStyle(
+                      fontFamily: 'Orbitron',
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
                       color: Colors.white,
@@ -88,18 +88,22 @@ class CtrlXHeader extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  style: GoogleFonts.orbitron(
+                  style: const TextStyle(
+                    fontFamily: 'Orbitron',
                     fontWeight: FontWeight.w700,
                     fontSize: 20,
                     letterSpacing: -0.5,
+                    color: Colors.white, // opcional, pero recomendable
                   ),
                 ),
               ),
 
               // Estado conectado (pill)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: pillColor.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(999),
@@ -126,7 +130,7 @@ class CtrlXHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
 
@@ -137,21 +141,15 @@ class CtrlXHeader extends StatelessWidget {
             children: [
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
               ),
               const Spacer(),
               Text(
                 ip,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 13,
-                ),
-              )
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -164,11 +162,7 @@ class _GradientText extends StatelessWidget {
   final TextStyle? style;
   final Gradient gradient;
 
-  const _GradientText(
-    this.text, {
-    required this.gradient,
-    this.style,
-  });
+  const _GradientText(this.text, {required this.gradient, this.style});
 
   @override
   Widget build(BuildContext context) {
@@ -179,10 +173,7 @@ class _GradientText extends StatelessWidget {
           Rect.fromLTWH(0, 0, bounds.width, bounds.height),
         );
       },
-      child: Text(
-        text,
-        style: style,
-      ),
+      child: Text(text, style: style),
     );
   }
 }
