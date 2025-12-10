@@ -1,5 +1,6 @@
 // lib/presentation/widgets/header_ctrlx.dart
 import 'package:flutter/material.dart';
+
 class CtrlXHeader extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -23,9 +24,8 @@ class CtrlXHeader extends StatelessWidget {
     const secondary = Color(0xFF00E5A5);
 
     final bgColor = const Color(0xFF0F1C2E);
-    final pillColor = connected
-        ? Colors.greenAccent.shade400
-        : Colors.redAccent.shade200;
+    final pillColor =
+        connected ? Colors.greenAccent.shade400 : Colors.redAccent.shade200;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -64,10 +64,10 @@ class CtrlXHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Center(
+                child: const Center(
                   child: Text(
                     'X',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Orbitron',
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
@@ -93,7 +93,7 @@ class CtrlXHeader extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     fontSize: 20,
                     letterSpacing: -0.5,
-                    color: Colors.white, // opcional, pero recomendable
+                    color: Colors.white,
                   ),
                 ),
               ),

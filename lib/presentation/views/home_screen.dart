@@ -1,6 +1,6 @@
 // lib/presentation/views/home_screen.dart
 import 'package:flutter/material.dart';
-import '../widgets/header_ctrlx.dart';
+import '../widgets/header_ctrlx_wifi.dart';   // <-- correcto
 import '../navigation/ctrlx_tabs.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -11,21 +11,20 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          // HEADER
-          const SafeArea(
+          // HEADER con monitoreo en tiempo real del WiFi Spider5
+          SafeArea(
             bottom: false,
             child: Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: CtrlXHeader(
-                title: "ctrlX Monitor",
-                subtitle: "ctrlX CORE X7",
-                status: "CONNECTED",
-                ip: "192.168.1.100",
+              padding: const EdgeInsets.only(top: 8),
+              child: CtrlXHeaderWifi(
+                title: 'ctrlX Monitor',
+                subtitle: 'ctrlX CORE X7',
+                ctrlxIp: '192.168.170.1',
               ),
             ),
           ),
 
-          // NAV + CONTENIDO (CtrlXTabsShell ya trae su DefaultTabController)
+          // NAV + contenido
           const Expanded(
             child: CtrlXTabsShell(),
           ),

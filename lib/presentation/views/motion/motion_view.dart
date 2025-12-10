@@ -495,71 +495,87 @@ class _ErrorRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(top: 12),
+      height: 64,
       decoration: BoxDecoration(
-        color: _bgInner, // <-- fondo #1A3A52
+        color: _bgInner,
         borderRadius: BorderRadius.circular(18),
       ),
-      height: 64,
-      child: Row(
+      // para que la barrita naranja no “se salga” del borde redondeado
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
         children: [
-          // barrita naranja pegada al borde, con curva
-          Positioned.fill(
+          // barrita naranja pegada al borde IZQUIERDO, dentro del card
+          Positioned(
             left: 0,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                width: 4,
-                margin: const EdgeInsets.only(left: 0),
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    bottomLeft: Radius.circular(18),
-                  ),
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFF9100), Color(0xFFFF3D00)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: 4,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  bottomLeft: Radius.circular(18),
+                ),
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFF9100), Color(0xFFFF3D00)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                fontFamily: 'JetBrainsMono',
-                fontSize: 11,
-                color: _textSecondary,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-            decoration: BoxDecoration(
-              color: _primary.withAlpha(40),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: _primary.withAlpha(200)),
-            ),
-            child: Text(
-              status,
-              style: const TextStyle(
-                fontFamily: 'Orbitron',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
 
-          const SizedBox(width: 16),
+          // contenido centrado verticalmente, alineado a la izquierda
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: const TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        fontSize: 11,
+                        color: _textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _primary.withAlpha(40),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: _primary.withAlpha(200),
+                      ),
+                    ),
+                    child: Text(
+                      status,
+                      style: const TextStyle(
+                        fontFamily: 'Orbitron',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
+
+
 
 /* ================== DOT ================== */
 
