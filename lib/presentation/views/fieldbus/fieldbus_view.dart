@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:plc_app/presentation/widgets/last_update_footer.dart';
 import 'package:plc_app/services/fieldbus_ws_service.dart';
 
 class FieldbusView extends StatefulWidget {
@@ -18,7 +19,7 @@ class _FieldbusViewState extends State<FieldbusView> {
   static const Color _warning = Color(0xFFFFB300);
   static const Color _success = Color(0xFF00E676);
   static const Color _textSecondary = Color(0xFF90CAF9);
-  static const Color _textMuted = Color(0xFF5A7C99);
+  // static const Color _textMuted = Color(0xFF5A7C99);
 
   late Timer _timer;
   DateTime _lastUpdate = DateTime.now();
@@ -194,26 +195,7 @@ class _FieldbusViewState extends State<FieldbusView> {
           const SizedBox(height: 8),
 
           // FOOTER "Last update"
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: _bgCard,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _border),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const _Dot(color: _primary, size: 6),
-                const SizedBox(width: 8),
-                Text(
-                  _lastUpdateText(),
-                  style: const TextStyle(color: _textMuted, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
+          LastUpdateFooter(text: _lastUpdateText()),
         ],
       ),
     );
@@ -520,18 +502,3 @@ class _SlaveRow extends StatelessWidget {
 
 // ================== DOT ==================
 
-class _Dot extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _Dot({required this.color, this.size = 6});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}

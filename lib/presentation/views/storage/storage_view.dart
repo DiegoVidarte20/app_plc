@@ -1,5 +1,6 @@
 // lib/presentation/views/storage/storage_view.dart
 import 'package:flutter/material.dart';
+import 'package:plc_app/presentation/widgets/last_update_footer.dart';
 import '../../../services/storage_ws_service.dart';
 
 class StorageView extends StatefulWidget {
@@ -282,26 +283,7 @@ class _StorageViewState extends State<StorageView> {
           const SizedBox(height: 16),
 
           // ===== Footer "Last update" =====
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: _bgCard,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _border),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const _Dot(color: _primaryBlue, size: 6),
-                const SizedBox(width: 8),
-                Text(
-                  _lastUpdateText(),
-                  style: const TextStyle(color: _textMuted, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
+          LastUpdateFooter(text: _lastUpdateText()),
         ],
       ),
     );
@@ -531,19 +513,3 @@ class _StorageProgressBar extends StatelessWidget {
 }
 
 /* ================== DOT FOOTER ================== */
-
-class _Dot extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _Dot({required this.color, this.size = 6});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}

@@ -1,6 +1,7 @@
 // lib/presentation/views/motion/motion_view.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:plc_app/presentation/widgets/last_update_footer.dart';
 
 class MotionView extends StatefulWidget {
   const MotionView({super.key});
@@ -21,7 +22,7 @@ class _MotionViewState extends State<MotionView> {
   static const Color _danger = Color(0xFFFF3D00);
   static const Color _primary = Color(0xFF00A0FF);
   static const Color _textSecondary = Color(0xFF90CAF9);
-  static const Color _textMuted = Color(0xFF5A7C99);
+  // static const Color _textMuted = Color(0xFF5A7C99);
 
   late Timer _timer;
   DateTime _lastUpdate = DateTime.now();
@@ -76,39 +77,7 @@ class _MotionViewState extends State<MotionView> {
           const SizedBox(height: 8),
 
           // Footer "last update"
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: _bgCard,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _border),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const _Dot(color: _primary, size: 6),
-                const SizedBox(width: 8),
-                const Text(
-                  // usa solo JetBrainsMono global si quieres en el tema
-                  // pero aquí solo color y tamaño
-                  '',
-                  style: TextStyle(
-                    // placeholder, el texto real va abajo
-                    fontSize: 0,
-                  ),
-                ),
-                Text(
-                  _lastUpdateText(),
-                  style: const TextStyle(
-                    color: _textMuted,
-                    fontSize: 11,
-                    fontFamily: 'JetBrainsMono',
-                  ),
-                ),
-              ],
-            ),
-          ),
+          LastUpdateFooter(text: _lastUpdateText()),
         ],
       ),
     );
@@ -579,18 +548,3 @@ class _ErrorRow extends StatelessWidget {
 
 /* ================== DOT ================== */
 
-class _Dot extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _Dot({required this.color, this.size = 6});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}

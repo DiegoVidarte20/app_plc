@@ -5,6 +5,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:plc_app/services/information_ws_service.dart';
 
 import 'header_ctrlx.dart';
 
@@ -36,10 +37,30 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
   String _status = 'DISCONNECTED';
   bool _connected = false;
 
+  // 👇 NUEVO: servicio + último snapshot de info
+  late final InformationWSService _infoWs;
+  CtrlXInformation? _info;
+
   @override
   void initState() {
     super.initState();
-    _start();
+    _start(); // lo que ya tenías para el WiFi
+
+    // 👇 NUEVO: WS /ws/information
+    _infoWs = InformationWSService(
+      'ws://${widget.ctrlxIp}:9000/ws/information',
+    );
+    _infoWs.stream.listen(
+      (info) {
+        if (!mounted) return;
+        setState(() {
+          _info = info;
+        });
+      },
+      onError: (e) {
+        debugPrint('[INFO WS] error: $e');
+      },
+    );
   }
 
   Future<void> _start() async {
@@ -57,11 +78,11 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
 
     // 2) Cambios de red general (wifi/datos)
     _sub?.cancel();
-    _sub = _connectivity.onConnectivityChanged.listen(
-      (List<ConnectivityResult> results) {
-        _refreshFromConnectivity(results);
-      },
-    );
+    _sub = _connectivity.onConnectivityChanged.listen((
+      List<ConnectivityResult> results,
+    ) {
+      _refreshFromConnectivity(results);
+    });
 
     // 3) Poll para detectar cambio wifi → wifi (Android no lo notifica)
     _pollTimer?.cancel();
@@ -111,6 +132,7 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
   void dispose() {
     _sub?.cancel();
     _pollTimer?.cancel();
+    _infoWs.dispose(); // 👈 NUEVO
     super.dispose();
   }
 
@@ -119,9 +141,13 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
     return CtrlXHeader(
       title: widget.title,
       subtitle: widget.subtitle,
-      status: _status,      // CONNECTED / DISCONNECTED
-      ip: widget.ctrlxIp,   // 192.168.170.1
+      status: _status,
+      ip: widget.ctrlxIp,
       connected: _connected,
+      hostname: _info?.hostname, // 👈 NUEVO
+      operatingSystem: _info?.operatingSystem,
+      storeSerialId: _info?.storeSerialId,
+      typeCode: _info?.typeCode,
     );
   }
 }

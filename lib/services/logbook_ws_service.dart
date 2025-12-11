@@ -19,7 +19,19 @@ class LogEntry {
   });
 
   factory LogEntry.fromJson(Map<String, dynamic> json) {
-    final ts = DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now();
+    final tsRaw = json['timestamp']?.toString() ?? '';
+    DateTime ts;
+
+    if (tsRaw.isNotEmpty) {
+      try {
+        // viene con "Z" (UTC) -> lo pasamos a hora local
+        ts = DateTime.parse(tsRaw).toLocal();
+      } catch (_) {
+        ts = DateTime.now();
+      }
+    } else {
+      ts = DateTime.now();
+    }
 
     return LogEntry(
       timestamp: ts,
@@ -33,6 +45,7 @@ class LogEntry {
     );
   }
 }
+
 
 class LogbookWSService {
   final String url;

@@ -36,12 +36,9 @@ class _LogbookViewState extends State<LogbookView> {
         if (entries.isEmpty) return;
         setState(() {
           for (final e in entries.reversed) {
-            _logs.insert(0, e);
+            _logs.insert(0, e); // el más nuevo va quedando arriba
           }
-          // opcional: máximo 100 eventos
-          if (_logs.length > 100) {
-            _logs.removeRange(100, _logs.length);
-          }
+          // 🔥 SIN límite, no borramos nada
         });
       },
       onError: (e) {
@@ -85,22 +82,27 @@ class _LogbookViewState extends State<LogbookView> {
                     ),
                   )
                 : Column(
-                    children: _logs.map((log) {
-                      final hh = log.timestamp.hour.toString().padLeft(2, '0');
-                      final mm = log.timestamp.minute.toString().padLeft(
-                        2,
-                        '0',
-                      );
-                      final ss = log.timestamp.second.toString().padLeft(
-                        2,
-                        '0',
-                      );
+                    children: _logs.reversed.map((log) {
+                      final ts = log.timestamp;
+
+                      // Fecha tipo 05/12/2025
+                      final dd = ts.day.toString().padLeft(2, '0');
+                      final MM = ts.month.toString().padLeft(2, '0');
+                      final yyyy = ts.year.toString();
+                      final dateStr = '$dd/$MM/$yyyy';
+
+                      // Hora tipo 14:33:41
+                      final hh = ts.hour.toString().padLeft(2, '0');
+                      final mm = ts.minute.toString().padLeft(2, '0');
+                      final ss = ts.second.toString().padLeft(2, '0');
+                      final timeStr = '$hh:$mm:$ss';
 
                       return Column(
                         children: [
                           _LogEventRow(
                             level: log.level,
-                            time: '$hh:$mm:$ss',
+                            date: dateStr,
+                            time: timeStr,
                             message:
                                 '${log.code} — ${log.title}\n${log.message}',
                           ),
@@ -214,6 +216,7 @@ class _LogSectionCard extends StatelessWidget {
 
 class _LogEventRow extends StatelessWidget {
   final String level;
+  final String date;
   final String time;
   final String message;
 
@@ -227,6 +230,7 @@ class _LogEventRow extends StatelessWidget {
 
   const _LogEventRow({
     required this.level,
+    required this.date,
     required this.time,
     required this.message,
   });
@@ -287,13 +291,26 @@ class _LogEventRow extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          time,
-                          style: const TextStyle(
-                            fontFamily: 'JetBrainsMono',
-                            fontSize: 10,
-                            color: _textMuted,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              time,
+                              style: const TextStyle(
+                                fontFamily: 'JetBrainsMono',
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              date,
+                              style: const TextStyle(
+                                fontFamily: 'JetBrainsMono',
+                                fontSize: 9,
+                                color: _textMuted,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

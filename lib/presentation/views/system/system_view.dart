@@ -1,6 +1,5 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'package:plc_app/presentation/widgets/last_update_footer.dart';
 import 'package:plc_app/services/system_ws_service.dart';
 
 class SystemView extends StatefulWidget {
@@ -12,16 +11,16 @@ class SystemView extends StatefulWidget {
 
 class _SystemViewState extends State<SystemView> {
   // ===== Colores estilo CSS =====
-  static const Color _bgCard = Color(0xFF132F4C);
+  // static const Color _bgCard = Color(0xFF132F4C);
   static const Color _bgElevated = Color(0xFF1A3A52);
-  static const Color _border = Color(0xFF1E4976);
+  // static const Color _border = Color(0xFF1E4976);
   static const Color _primary = Color(0xFF0066CC);
   static const Color _secondary = Color(0xFF00B8D4);
   static const Color _success = Color(0xFF00E676);
   static const Color _warning = Color(0xFFFFB300);
   static const Color _danger = Color(0xFFFF3D00);
 
-  final Random _rnd = Random();
+  // final Random _rnd = Random();
 
   // CPU cores %
   List<double> _cores = [0, 0, 0, 0];
@@ -32,10 +31,6 @@ class _SystemViewState extends State<SystemView> {
 
   double get totalRamGB => _totalRamBytes / (1024 * 1024 * 1024);
   double get usedRamGB => _usedRamBytes / (1024 * 1024 * 1024);
-
-  // Temps (°C) – por ahora fake con un pequeño ruido
-  double _cpuTemp = 58;
-  double _boardTemp = 42;
 
   late final SystemWSService _ws;
   DateTime _lastUpdate = DateTime.now();
@@ -54,13 +49,6 @@ class _SystemViewState extends State<SystemView> {
           _cores = metrics.cores;
           _totalRamBytes = metrics.totalRam;
           _usedRamBytes = metrics.usedRam;
-
-          // pequeña animación para las temperaturas
-          _cpuTemp = (_cpuTemp + (_rnd.nextDouble() * 2 - 1)).clamp(45.0, 75.0);
-          _boardTemp = (_boardTemp + (_rnd.nextDouble() * 2 - 1)).clamp(
-            35.0,
-            60.0,
-          );
 
           _lastUpdate = DateTime.now();
           _hasData = true;
@@ -174,27 +162,6 @@ class _SystemViewState extends State<SystemView> {
             ),
           ),
 
-          // ================= TEMPERATURES =================
-          _SectionCard(
-            title: 'TEMPERATURES',
-            statusText: 'NORMAL',
-            statusColor: _success,
-            child: Row(
-              children: [
-                Expanded(
-                  child: _TemperatureGauge(label: 'CPU TEMP', value: _cpuTemp),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _TemperatureGauge(
-                    label: 'BOARD TEMP',
-                    value: _boardTemp,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // ================= POWER SUPPLY =================
           _SectionCard(
             title: 'POWER SUPPLY',
@@ -210,29 +177,8 @@ class _SystemViewState extends State<SystemView> {
           const SizedBox(height: 8),
 
           // ================= FOOTER =================
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: _bgCard,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _border),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const _Dot(color: _secondary, size: 6),
-                const SizedBox(width: 8),
-                Text(
-                  _lastUpdateText(),
-                  style: const TextStyle(
-                    color: Color(0xFF5A7C99),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // ================= FOOTER =================
+          LastUpdateFooter(text: _lastUpdateText()),
         ],
       ),
     );
@@ -365,7 +311,6 @@ class _CoreMetricCard extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-
               const SizedBox(width: 2),
               Text(
                 '%',
@@ -463,87 +408,6 @@ class _ListMetricRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _TemperatureGauge extends StatelessWidget {
-  final String label;
-  final double value;
-
-  const _TemperatureGauge({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          width: 110,
-          height: 110,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: SweepGradient(
-                    colors: [
-                      Color(0xFF00E676),
-                      Color(0xFF00E676),
-                      Color(0xFFFFB300),
-                      Color(0xFFFF3D00),
-                      Color(0xFFFF3D00),
-                    ],
-                    stops: [0.0, 0.33, 0.66, 0.9, 1.0],
-                  ),
-                ),
-              ),
-              Container(
-                width: 88,
-                height: 88,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFF132F4C),
-                ),
-              ),
-              Text(
-                '${value.toStringAsFixed(0)}°C',
-                style: const TextStyle(
-                  fontFamily: 'Orbitron',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Color(0xFF5A7C99),
-            letterSpacing: 0.8,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Dot extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _Dot({required this.color, this.size = 6});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

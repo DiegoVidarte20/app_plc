@@ -8,6 +8,11 @@ class CtrlXHeader extends StatelessWidget {
   final String ip;
   final bool connected;
 
+  final String? hostname;
+  final String? operatingSystem;
+  final String? storeSerialId;
+  final String? typeCode;
+
   const CtrlXHeader({
     super.key,
     required this.title,
@@ -15,6 +20,10 @@ class CtrlXHeader extends StatelessWidget {
     required this.status,
     required this.ip,
     this.connected = true,
+    this.hostname,
+    this.operatingSystem,
+    this.storeSerialId,
+    this.typeCode,
   });
 
   @override
@@ -24,8 +33,9 @@ class CtrlXHeader extends StatelessWidget {
     const secondary = Color(0xFF00E5A5);
 
     final bgColor = const Color(0xFF0F1C2E);
-    final pillColor =
-        connected ? Colors.greenAccent.shade400 : Colors.redAccent.shade200;
+    final pillColor = connected
+        ? Colors.greenAccent.shade400
+        : Colors.redAccent.shade200;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -137,17 +147,36 @@ class CtrlXHeader extends StatelessWidget {
           const SizedBox(height: 8),
 
           // Subtítulo e IP
-          Row(
+          // Subtítulo, IP y panel de información
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                subtitle,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              Row(
+                children: [
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const Spacer(),
+                  Text(
+                    ip,
+                    style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                ],
               ),
-              const Spacer(),
-              Text(
-                ip,
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
-              ),
+
+              if (hostname != null ||
+                  operatingSystem != null ||
+                  storeSerialId != null ||
+                  typeCode != null) ...[
+                const SizedBox(height: 10),
+                _CoreInfoPanel(
+                  hostname: hostname,
+                  operatingSystem: operatingSystem,
+                  storeSerialId: storeSerialId,
+                  typeCode: typeCode,
+                ),
+              ],
             ],
           ),
         ],
@@ -174,6 +203,173 @@ class _GradientText extends StatelessWidget {
         );
       },
       child: Text(text, style: style),
+    );
+  }
+}
+
+class _CoreInfoPanel extends StatelessWidget {
+  final String? hostname;
+  final String? operatingSystem;
+  final String? storeSerialId;
+  final String? typeCode;
+
+  const _CoreInfoPanel({
+    required this.hostname,
+    required this.operatingSystem,
+    required this.storeSerialId,
+    required this.typeCode,
+  });
+
+  bool get _hasData =>
+      (hostname != null && hostname!.isNotEmpty) ||
+      (operatingSystem != null && operatingSystem!.isNotEmpty) ||
+      (storeSerialId != null && storeSerialId!.isNotEmpty) ||
+      (typeCode != null && typeCode!.isNotEmpty);
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasData) return const SizedBox.shrink();
+
+    const bgInner = Color(0xFF111827);  // tipo slate-900
+    const border = Color(0xFF1F2937);   // tipo slate-800
+    const labelColor = Color(0xFF9CA3AF); // gris claro
+    const valueColor = Color(0xFFE5E7EB); // casi blanco
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bgInner,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabecera pequeña "CORE INFO"
+          Row(
+            children: const [
+              Icon(
+                Icons.memory,
+                size: 14,
+                color: Color(0xFF60A5FA), // azulito
+              ),
+              SizedBox(width: 6),
+              Text(
+                'CORE INFORMATION',
+                style: TextStyle(
+                  fontFamily: 'Orbitron',
+                  fontSize: 9,
+                  letterSpacing: 1.3,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF60A5FA),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // Grid 2x2 de items
+          Row(
+            children: [
+              Expanded(
+                child: _InfoItem(
+                  label: 'HOSTNAME',
+                  value: hostname,
+                  labelColor: labelColor,
+                  valueColor: valueColor,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InfoItem(
+                  label: 'OPERATING SYSTEM',
+                  value: operatingSystem,
+                  labelColor: labelColor,
+                  valueColor: valueColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _InfoItem(
+                  label: 'SERIAL',
+                  value: storeSerialId,
+                  labelColor: labelColor,
+                  valueColor: valueColor,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InfoItem(
+                  label: 'TYPE CODE',
+                  value: typeCode,
+                  labelColor: labelColor,
+                  valueColor: valueColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoItem extends StatelessWidget {
+  final String label;
+  final String? value;
+  final Color labelColor;
+  final Color valueColor;
+
+  const _InfoItem({
+    required this.label,
+    required this.value,
+    required this.labelColor,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (value == null || value!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'JetBrainsMono',
+            fontSize: 9,
+            letterSpacing: 0.8,
+            color: labelColor,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value!,
+          style: TextStyle(
+            fontFamily: 'JetBrainsMono',
+            fontSize: 11,
+            color: valueColor,
+            height: 1.2,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }
