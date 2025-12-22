@@ -37,30 +37,15 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
   String _status = 'DISCONNECTED';
   bool _connected = false;
 
-  // 👇 NUEVO: servicio + último snapshot de info
-  late final InformationWSService _infoWs;
+  // ✅ WS: solo cuando estás en Spider5
+  InformationWSService? _infoWs;
+  StreamSubscription? _infoSub;
   CtrlXInformation? _info;
 
   @override
   void initState() {
     super.initState();
-    _start(); // lo que ya tenías para el WiFi
-
-    // 👇 NUEVO: WS /ws/information
-    _infoWs = InformationWSService(
-      'ws://${widget.ctrlxIp}:9000/ws/information',
-    );
-    _infoWs.stream.listen(
-      (info) {
-        if (!mounted) return;
-        setState(() {
-          _info = info;
-        });
-      },
-      onError: (e) {
-        debugPrint('[INFO WS] error: $e');
-      },
-    );
+    _start(); // solo WiFi watcher + polling
   }
 
   Future<void> _start() async {
@@ -73,16 +58,19 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
         _status = 'DISCONNECTED';
         _connected = false;
       });
+
+      _stopInfoWs();
+      setState(() => _info = null);
       return;
     }
 
     // 2) Cambios de red general (wifi/datos)
     _sub?.cancel();
-    _sub = _connectivity.onConnectivityChanged.listen((
-      List<ConnectivityResult> results,
-    ) {
-      _refreshFromConnectivity(results);
-    });
+    _sub = _connectivity.onConnectivityChanged.listen(
+      (List<ConnectivityResult> results) {
+        _refreshFromConnectivity(results);
+      },
+    );
 
     // 3) Poll para detectar cambio wifi → wifi (Android no lo notifica)
     _pollTimer?.cancel();
@@ -100,6 +88,32 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
     await _refreshFromConnectivity(results);
   }
 
+  void _startInfoWs() {
+    _stopInfoWs();
+
+    _infoWs = InformationWSService(
+      'ws://${widget.ctrlxIp}:9000/ws/information',
+    );
+
+    _infoSub = _infoWs!.stream.listen(
+      (info) {
+        if (!mounted) return;
+        setState(() => _info = info);
+      },
+      onError: (e) {
+        debugPrint('[INFO WS] error: $e');
+      },
+    );
+  }
+
+  void _stopInfoWs() {
+    _infoSub?.cancel();
+    _infoSub = null;
+
+    _infoWs?.dispose();
+    _infoWs = null;
+  }
+
   Future<void> _refreshFromConnectivity(
     List<ConnectivityResult> results,
   ) async {
@@ -111,13 +125,16 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
         _status = 'DISCONNECTED';
         _connected = false;
       });
+
+      _stopInfoWs();
+      setState(() => _info = null);
       return;
     }
 
     // Estamos en WiFi → obtener SSID
     String? ssid = await _networkInfo.getWifiName();
     if (ssid != null) {
-      ssid = ssid.replaceAll('"', '');
+      ssid = ssid.replaceAll('"', '').trim();
     }
 
     final bool ok = (ssid == _targetSsid);
@@ -126,13 +143,21 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
       _connected = ok;
       _status = ok ? 'CONNECTED' : 'DISCONNECTED';
     });
+
+    // ✅ maneja WS según conexión a SSID target
+    if (ok) {
+      if (_infoWs == null) _startInfoWs();
+    } else {
+      _stopInfoWs();
+      setState(() => _info = null);
+    }
   }
 
   @override
   void dispose() {
+    _stopInfoWs();
     _sub?.cancel();
     _pollTimer?.cancel();
-    _infoWs.dispose(); // 👈 NUEVO
     super.dispose();
   }
 
@@ -144,10 +169,12 @@ class _CtrlXHeaderWifiState extends State<CtrlXHeaderWifi> {
       status: _status,
       ip: widget.ctrlxIp,
       connected: _connected,
-      hostname: _info?.hostname, // 👈 NUEVO
-      operatingSystem: _info?.operatingSystem,
-      storeSerialId: _info?.storeSerialId,
-      typeCode: _info?.typeCode,
+
+      // ✅ placeholders siempre
+      hostname: _info?.hostname ?? '--',
+      operatingSystem: _info?.operatingSystem ?? '--',
+      storeSerialId: _info?.storeSerialId ?? '--',
+      typeCode: _info?.typeCode ?? '--',
     );
   }
 }

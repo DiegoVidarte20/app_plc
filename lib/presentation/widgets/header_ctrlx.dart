@@ -165,18 +165,13 @@ class CtrlXHeader extends StatelessWidget {
                 ],
               ),
 
-              if (hostname != null ||
-                  operatingSystem != null ||
-                  storeSerialId != null ||
-                  typeCode != null) ...[
-                const SizedBox(height: 10),
-                _CoreInfoPanel(
-                  hostname: hostname,
-                  operatingSystem: operatingSystem,
-                  storeSerialId: storeSerialId,
-                  typeCode: typeCode,
-                ),
-              ],
+              const SizedBox(height: 10),
+              _CoreInfoPanel(
+                hostname: hostname,
+                operatingSystem: operatingSystem,
+                storeSerialId: storeSerialId,
+                typeCode: typeCode,
+              ),
             ],
           ),
         ],
@@ -220,18 +215,18 @@ class _CoreInfoPanel extends StatelessWidget {
     required this.typeCode,
   });
 
-  bool get _hasData =>
-      (hostname != null && hostname!.isNotEmpty) ||
-      (operatingSystem != null && operatingSystem!.isNotEmpty) ||
-      (storeSerialId != null && storeSerialId!.isNotEmpty) ||
-      (typeCode != null && typeCode!.isNotEmpty);
+  // bool get _hasData =>
+  //     (hostname != null && hostname!.isNotEmpty) ||
+  //     (operatingSystem != null && operatingSystem!.isNotEmpty) ||
+  //     (storeSerialId != null && storeSerialId!.isNotEmpty) ||
+  //     (typeCode != null && typeCode!.isNotEmpty);
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasData) return const SizedBox.shrink();
 
-    const bgInner = Color(0xFF111827);  // tipo slate-900
-    const border = Color(0xFF1F2937);   // tipo slate-800
+
+    const bgInner = Color(0xFF111827); // tipo slate-900
+    const border = Color(0xFF1F2937); // tipo slate-800
     const labelColor = Color(0xFF9CA3AF); // gris claro
     const valueColor = Color(0xFFE5E7EB); // casi blanco
 
@@ -341,9 +336,7 @@ class _InfoItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (value == null || value!.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    final shown = (value == null || value!.trim().isEmpty) ? '--' : value!.trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +352,7 @@ class _InfoItem extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          value!,
+          shown,
           style: TextStyle(
             fontFamily: 'JetBrainsMono',
             fontSize: 11,
@@ -373,3 +366,4 @@ class _InfoItem extends StatelessWidget {
     );
   }
 }
+
